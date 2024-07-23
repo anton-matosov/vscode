@@ -33,9 +33,19 @@ if [ "$VSCODE_INJECTION" == "1" ]; then
 		builtin unset VSCODE_SHELL_LOGIN
 
 		# Apply any explicit path prefix (see #99878)
-		if [ -n "${VSCODE_PATH_PREFIX:-}" ]; then
-			export PATH="$VSCODE_PATH_PREFIX:$PATH"
-			builtin unset VSCODE_PATH_PREFIX
+		if [ -n "${VSCODE_PATH_MUTATION:-}" ]; then
+			case "$VSCODE_PATH_MUTATION_MODE" in
+				"prepend")
+					export PATH="$VSCODE_PATH_MUTATION:$PATH"
+					;;
+				"append")
+					export PATH="$PATH:$VSCODE_PATH_MUTATION"
+					;;
+				"replace")
+					export PATH="$VSCODE_PATH_MUTATION"
+					;;
+			esac
+			builtin unset VSCODE_PATH_MUTATION
 		fi
 	fi
 	builtin unset VSCODE_INJECTION
