@@ -11,8 +11,18 @@ if [[ $options[norcs] = off && -o "login" ]]; then
 	fi
 
 	# Apply any explicit path prefix (see #99878)
-	if (( ${+VSCODE_PATH_PREFIX} )); then
-		export PATH="$VSCODE_PATH_PREFIX:$PATH"
+	if (( ${+VSCODE_PATH_MUTATION} )); then
+		case "$VSCODE_PATH_MUTATION_MODE" in
+			"prepend")
+				export PATH="$VSCODE_PATH_MUTATION:$PATH"
+				;;
+			"append")
+				export PATH="$PATH:$VSCODE_PATH_MUTATION"
+				;;
+			"replace")
+				export PATH="$VSCODE_PATH_MUTATION"
+				;;
+		esac
 	fi
-	builtin unset VSCODE_PATH_PREFIX
+	builtin unset VSCODE_PATH_MUTATION
 fi
