@@ -23,10 +23,17 @@ or exit
 set --global VSCODE_SHELL_INTEGRATION 1
 
 # Apply any explicit path prefix (see #99878)
-if status --is-login; and set -q VSCODE_PATH_PREFIX
-	set -gx PATH "$VSCODE_PATH_PREFIX:$PATH"
+if status --is-login; and set -q VSCODE_PATH_MUTATION
+	switch "$VSCODE_PATH_MUTATION_MODE"
+		case "prepend"
+			set -gx PATH "$VSCODE_PATH_MUTATION:$PATH"
+		case "append"
+			set -gx PATH "$PATH:$VSCODE_PATH_MUTATION"
+		case "replace"
+			set -gx PATH "$VSCODE_PATH_MUTATION"
+	end
 end
-set -e VSCODE_PATH_PREFIX
+set -e VSCODE_PATH_MUTATION
 
 set -g __vsc_applied_env_vars 0
 function __vsc_apply_env_vars

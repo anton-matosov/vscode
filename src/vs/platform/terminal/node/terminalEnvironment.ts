@@ -280,32 +280,41 @@ export function getShellIntegrationInjection(
  * On macOS the profile calls path_helper which adds a bunch of standard bin directories to the
  * beginning of the PATH. This causes significant problems for the environment variable
  * collection API as the custom paths added to the end will now be somewhere in the middle of
- * the PATH. To combat this, VSCODE_PATH_PREFIX is used to re-apply any prefix after the profile
+ * the PATH. To combat this, VSCODE_PATH_MUTATION is used to re-apply any prefix after the profile
  * has run. This will cause duplication in the PATH but should fix the issue.
  *
  * See #99878 for more information.
  */
 function addEnvMixinPathPrefix(options: ITerminalProcessOptions, envMixin: IProcessEnvironment): void {
-	if (isMacintosh && options.environmentVariableCollections) {
-		// Deserialize and merge
-		const deserialized = deserializeEnvironmentVariableCollections(options.environmentVariableCollections);
-		const merged = new MergedEnvironmentVariableCollection(deserialized);
+	if (!isMacintosh || !options.environmentVariableCollections) {
+		return;
+	}
 
-		// Get all prepend PATH entries
-		const pathEntry = merged.getVariableMap({ workspaceFolder: options.workspaceFolder }).get('PATH');
-		const prependToPath: string[] = [];
-		if (pathEntry) {
-			for (const mutator of pathEntry) {
-				if (mutator.type === EnvironmentVariableMutatorType.Prepend) {
-					prependToPath.push(mutator.value);
-				}
-			}
-		}
+	// Deserialize and merge
+	const deserialized = deserializeEnvironmentVariableCollections(options.environmentVariableCollections);
+	const merged = new MergedEnvironmentVariableCollection(deserialized);
 
-		// Add to the environment mixin to be applied in the shell integration script
-		if (prependToPath.length > 0) {
-			envMixin['VSCODE_PATH_PREFIX'] = prependToPath.join('');
-		}
+	// Get all prepend PATH entries
+	const pathEntry = merged.getVariableMap({ workspaceFolder: options.workspaceFolder }).get('PATH');
+
+	if (!pathEntry || pathEntry.length !== 1) {
+		// By the definition of environmentVariableCollections there can only be one mutation for an env variable
+		return;
+	}
+
+	// Add to the environment mixin to be applied in the shell integration script
+	envMixin['VSCODE_PATH_MUTATION_MODE'] = mutationModeToString(pathEntry[0].type);
+	envMixin['VSCODE_PATH_MUTATION'] = pathEntry[0].value;
+}
+
+function mutationModeToString(mode: EnvironmentVariableMutatorType): string {
+	switch (mode) {
+		case EnvironmentVariableMutatorType.Append:
+			return 'append';
+		case EnvironmentVariableMutatorType.Prepend:
+			return 'prepend';
+		case EnvironmentVariableMutatorType.Replace:
+			return 'replace';
 	}
 }
 
